@@ -15,7 +15,7 @@ GIT_PATH 	= "nim/networkManagerLora"
 GIT_SERVER  	= "192.168.2.111/"
 GIT_USER        = "gitolite_u"
 BRANCH         ?= "master"
-SRCREV		= "635d0b2cacd77942ef81b44f38b81690e8193eed"
+SRCREV		= "f5f26c7f91d7834f4b6960d2b014f2174778fb40"
 SRC_URI     	= "git://${GIT_SERVER}${GIT_PATH};tag=${SRCREV};branch=${BRANCH};prefer_premirror=1;protocol=ssh;user=${GIT_USER}"
 # SRC_URI     	= "git://${GIT_SERVER}${GIT_PATH};tag=${SRCREV};branch=${BRANCH};prefer_premirror=1;protocol=ssh;user=${GIT_USER}"
 
