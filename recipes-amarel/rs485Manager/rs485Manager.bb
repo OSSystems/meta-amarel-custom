@@ -15,7 +15,7 @@ GIT_PATH 	= "nim/rs485Manager.git"
 GIT_SERVER  	= "192.168.2.111/"
 GIT_USER        = "gitolite_u"
 BRANCH         ?= "master"
-SRCREV		= "67fe2c7cd995b3905d34c581d9e7bfe97bba9735"
+SRCREV		= "4a2038857ded71b82da71df83c1c199d12fd9aec"
 SRC_URI     	= "git://${GIT_SERVER}${GIT_PATH};tag=${SRCREV};branch=${BRANCH};prefer_premirror=1;protocol=ssh;user=${GIT_USER}"
 # SRC_URI     	= "git://${GIT_SERVER}${GIT_PATH};tag=${SRCREV};branch=${BRANCH};prefer_premirror=1;protocol=ssh;user=${GIT_USER}"
 
