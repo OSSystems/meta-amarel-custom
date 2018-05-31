@@ -1,0 +1,34 @@
+#!/bin/sh
+echo $@
+
+IN=`cat /proc/cmdline`
+. /etc/default/rcS
+mails=$(echo $IN | tr ";" "\n")
+
+#find the device which was mounted as root
+for addr in $mails
+do
+    if  [[ $addr =~ "root=" ]] ;
+    then
+      res=`echo $addr | cut -c 6-`
+      echo "${res}"
+    fi
+done
+#now call fsck
+
+if test -f /forcefsck
+    then
+        force="-f"
+    else
+        force=""
+    fi
+    if test "$FSCKFIX" = yes
+    then
+        fix="-y"
+    else
+        fix="-a"
+    fi
+fsck.ext4 $force $fix $res
+exit $?
+
+
