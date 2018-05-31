@@ -18,7 +18,8 @@ SRC_URI = "file://gpio-get.sh;name=gpio-get"
 SRC_URI += "file://gpio-set.sh;name=gpio-set"
 SRC_URI += "file://get_bundle.py;name=get_bundle"
 SRC_URI += "file://netafim_get_latest.sh;name=netafim_get_latest"
-SRC_URI += "file://NetBeat_v1.4.40.65_installer.bsx;name=NetBeat_v1.4.40.65_installer"
+SRC_URI += "file://NetBeat_v1.4.41.66_installer.bsx;name=NetBeat_v1.4.40.65_installer"
+SRC_URI += "file://fsck.auto;name=fsck.auto"
 
 
 # SRC_URI[gpio-get.md5sum] = "f7c5bf0bbf9abb6db5d49745fae2d44b"
@@ -39,11 +40,14 @@ do_install () {
     install -m 0755 ${S}/gpio-set.sh ${D}${base_bindir}/
     install -m 0755 ${S}/get_bundle.py ${D}${base_bindir}/
     install -m 0755 ${S}/netafim_get_latest.sh ${D}${base_bindir}/
-    install -m 0755 ${S}/NetBeat_v1.4.40.65_installer.bsx ${D}${base_bindir}/
+    install -m 0755 ${S}/NetBeat_v1.4.41.66_installer.bsx ${D}${base_bindir}/
+    install -m 0755 ${S}/gpio-get.sh ${D}${base_bindir}/
+    install -m 0755 ${S}/fsck.auto ${D}${base_bindir}/
+
 }
 
 # Mark the files which are part of this package
 FILES_${PN} += "{base_bindir}/netafim_get_latest.sh"
 FILES_${PN} += "{base_bindir}/get_bundle.py"
-FILES_${PN} += "{base_bindir}/NetBeat_v1.4.40.65_installer.bsx"
+FILES_${PN} += "{base_bindir}/NetBeat_v1.4.41.66_installer.bsx"
 
