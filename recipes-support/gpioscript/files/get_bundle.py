@@ -33,7 +33,7 @@ def get_lastest_build(hostname,BuildType,download_dir):
             count = ar_data["count"]
             for x in range(0,count):
                 ar_href= ar_data["file"][x]["content"]["href"]
-                cmd='wget  --directory-prefix=%s --progress=bar:force "http://%s:8111%s"'%(download_dir,hostname,ar_href)
+                cmd='wget  --directory-prefix=%s  "http://%s:8111%s"'%(download_dir,hostname,ar_href)
                 os.system(cmd)
   #  os.system("rm *.json")
 ##
@@ -53,7 +53,7 @@ def get_lastest_build_by_name_filter(hostname,BuildType,download_dir,name_filter
 		filename, fileext = os.path.splitext(ar_data["file"][x]["name"])
 		if name_filter ==  fileext:
 		  ar_href= ar_data["file"][x]["content"]["href"]
-		  cmd='wget  --directory-prefix=%s --progress=bar:force "http://%s:8111%s"'%(download_dir,hostname,ar_href)
+		  cmd='wget  --directory-prefix=%s "http://%s:8111%s"'%(download_dir,hostname,ar_href)
 		  os.system(cmd)
   #  os.system("rm *.json")
 
@@ -72,7 +72,7 @@ def get_build_by_tag_filter(hostname,BuildType,download_dir,tag,name_filter):
 	      filename, fileext = os.path.splitext(data["file"][x]["name"])
 	      if name_filter ==  fileext:
                 href= data["file"][x]["content"]["href"]
-                cmd='wget  --directory-prefix=%s --progress=bar:force "http://%s:8111%s" > /dev/null'%(download_dir,hostname,href)
+                cmd='wget  --directory-prefix=%s  "http://%s:8111%s" > /dev/null'%(download_dir,hostname,href)
 		#print cmd
                 os.system(cmd)
 		
@@ -106,7 +106,7 @@ def get_build_by_tag(hostname,BuildType,download_dir,tag):
                             count = ar_data["count"]
                             for x in range(0,count):
                                 ar_href= ar_data["file"][x]["content"]["href"]
-                                cmd='wget  --directory-prefix=%s --progress=bar:force "http://%s:8111%s"'%(download_dir,hostname,ar_href)
+                                cmd='wget  --directory-prefix=%s  "http://%s:8111%s"'%(download_dir,hostname,ar_href)
                                 os.system(cmd)
 
                         found=True

@@ -13,4 +13,4 @@ fi
 ./get_bundle.py -p NetBeat_Tiles -b NetBeat_RtuTile -d $1
 ./get_bundle.py -p NetBeat_Tiles -b NetBeat_Tiles_IsmParentTile -d $1
 ./get_bundle.py -p NetBeat       -b NetBeat_Installer -d $1
-chomd a+x *.bsx
+chmod a+x *.bsx
