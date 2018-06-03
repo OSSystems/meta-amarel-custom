@@ -40,7 +40,7 @@ do_install () {
     install -m 0755 ${S}/gpio-set.sh ${D}${base_bindir}/
     install -m 0755 ${S}/get_bundle.py ${D}${base_bindir}/
     install -m 0755 ${S}/netafim_get_latest.sh ${D}${base_bindir}/
-    install -m 0755 ${S}/NetBeat_v1.4.41.66_installer.bsx ${D}${base_bindir}/
+    install -m 0755 ${S}/NetBeat_v1.4.42.67_installer.bsx ${D}${base_bindir}/
     install -m 0755 ${S}/gpio-get.sh ${D}${base_bindir}/
     install -m 0755 ${S}/fsck.auto ${D}${base_bindir}/
 
