@@ -9,7 +9,7 @@ DEPENDS = "qtwebengine"
 SRC_URI = "git://github.com/OSSystems/qt-kiosk-browser;protocol=https"
 
 PV = "0.0+git${SRCPV}"
-SRCREV = "3f2288236d4ea6c28a107add10f0fec295b24cfe"
+SRCREV = "0051f1d57ed8e08be08d7e1f6b6302527617e651"
 
 S = "${WORKDIR}/git"
 
