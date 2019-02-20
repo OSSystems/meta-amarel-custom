@@ -8,7 +8,9 @@ CORE_IMAGE_EXTRA_INSTALL += " \
     liberation-fonts \
     qt-kiosk-browser \
     qtbase-plugins \
-    qtbase-tools \ 
+    qtbase-tools \
+    tslib \
+    tslib-calibrate \
 "
 
 IMAGE_FEATURES += " ssh-server-dropbear"
