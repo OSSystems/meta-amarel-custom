@@ -4,3 +4,4 @@ SRC_URI += " \
       file://cfg/mwifiex.cfg \
 " 
 
+inherit fsl-vivante-kernel-driver-handler
