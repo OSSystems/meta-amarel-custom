@@ -1,0 +1,22 @@
+#! /bin/sh
+
+case "$1" in
+  start)
+	echo "Starting nm_monitor"
+	/etc/init.d/nm_monitor &
+	;;
+  stop)
+	echo "Stopping nm_monitor"
+	killall nm_monitor
+	;;
+  status)
+	ps | grep  nm_monitor
+	;;
+  *)
+	echo "Usage: $0 {start|stop|status}" >&2
+	exit 1
+	;;
+esac
+
+exit 0
+

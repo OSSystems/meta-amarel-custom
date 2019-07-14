@@ -1,0 +1,47 @@
+#! /bin/sh
+### BEGIN INIT INFO
+# Short-Description: NetworkManager monitor
+# Description:       Daemon for automatically check network
+#                    connections.
+### END INIT INFO
+
+PINGISOK=0
+
+validate_network() {
+	local pingresult="$(timeout 3 ping google.com -c 3 | grep "time=")"
+	if [ -z "$pingresult" ];
+	then
+		PINGISOK=0
+	else
+		PINGISOK=1
+	fi
+}
+
+echo ==== NM monitor ===
+sleep 20
+RETRYCOUNTER=0
+while [ 1 ]; do
+	sleep 4
+	validate_network
+	if [ $PINGISOK -eq 1 ]; then
+		continue
+	else
+		RETRYCOUNTER=0
+		while [ $PINGISOK -ne 1 ] && [  $RETRYCOUNTER -lt 3 ]; do
+			sleep 3
+			echo Recheck network connection: $RETRYCOUNTER
+			validate_network
+			let "RETRYCOUNTER++"
+		done
+
+	fi
+
+	if [ $PINGISOK -ne 1 ]; then
+		echo Restart NM
+		/etc/init.d/NetworkManager.in restart
+	fi
+done
+
+exit 0
+
+
