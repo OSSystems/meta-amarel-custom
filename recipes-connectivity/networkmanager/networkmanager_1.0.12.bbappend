@@ -13,8 +13,6 @@ DEPENDS += " ppp wireless-tools"
 
 PACKAGECONFIG += " ppp"
 PACKAGECONFIG += " wifi"
-PACKAGECONFIG += " ifupdown"
-PACKAGECONFIG += " dhclient"
 
 EXTRA_OECONF_append = " \
     --with-nmcli=yes \
