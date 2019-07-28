@@ -19,6 +19,9 @@ validate_network() {
 
 echo ==== NM monitor ===
 sleep 20
+echo ==== NM Start ===
+/etc/init.d/NetworkManager start
+
 RETRYCOUNTER=0
 while [ 1 ]; do
 	sleep 4
@@ -38,7 +41,7 @@ while [ 1 ]; do
 
 	if [ $PINGISOK -ne 1 ]; then
 		echo Restart NM
-		/etc/init.d/NetworkManager.in restart
+		/etc/init.d/NetworkManager restart
 	fi
 done
 
