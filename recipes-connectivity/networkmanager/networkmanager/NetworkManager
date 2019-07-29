@@ -90,7 +90,6 @@ d_stop() {
 case "$1" in
   start)
 	echo "Starting $DESC" "$NAME"
-	rm /dev/ttyUSB2 || true
 	d_start
 	;;
   stop)

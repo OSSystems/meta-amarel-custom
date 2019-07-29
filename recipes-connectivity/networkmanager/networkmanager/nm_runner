@@ -11,8 +11,33 @@
 # Description:       Daemon for network manager monitorring
 ### END INIT INFO
 
+NM_SYSCON_DEV_CELL=/dev/ttyUSB3
+NM_SYSCON_DEV_WIFIAP=mlan0
+
 #update-rc.d -f hostapd remove
 #update-rc.d -f dnsmasq remove
+
+delete_usb2() {
+	if [ -c "/dev/ttyUSB2" ]; then
+		echo "Delete ttyUSB2"
+		rm /dev/ttyUSB2
+	fi
+}
+
+wait_hw() {
+	while [ ! -c $NM_SYSCON_DEV_CELL ];
+	do
+		echo "$NM_SYSCON_DEV_CELL not exist yet"
+		sleep 1;
+	done
+	echo "$NM_SYSCON_DEV_CELL is exist"
+
+	while [ -z "$(ifconfig $NM_SYSCON_DEV_WIFIAP)" ]; do
+		echo "$NM_SYSCON_DEV_WIFIAP not exist yet"
+		sleep 1;
+	done
+	echo "$NM_SYSCON_DEV_WIFIAP is exist"
+}
 
 
 set -e
@@ -63,6 +88,8 @@ nm_stop() {
 
 case "$1" in
   start)
+	wait_hw
+	delete_usb2
 	echo "Starting" "$NAME"
 	nm_start
 	;;
