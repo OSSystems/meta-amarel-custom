@@ -14,8 +14,9 @@
 NM_SYSCON_DEV_CELL=/dev/ttyUSB3
 NM_SYSCON_DEV_WIFIAP=mlan0
 
-#update-rc.d -f hostapd remove
-#update-rc.d -f dnsmasq remove
+update-rc.d -f hostapd remove
+update-rc.d -f dnsmasq remove
+ln -sf /usr/lib/jvm/java-8-oracle/jre/bin/java /usr/bin/java
 
 delete_usb2() {
 	if [ -c "/dev/ttyUSB2" ]; then
@@ -74,6 +75,7 @@ nm_start() {
 
 	start-stop-daemon --start --quiet --pidfile $PIDFILE --oknodo --background  \
 		--user $USER --make-pidfile --exec $DAEMON
+	echo "=== Monitor daemon started ==="
 }
 
 nm_stop() {
@@ -88,6 +90,7 @@ nm_stop() {
 
 case "$1" in
   start)
+	sleep 10
 	wait_hw
 	delete_usb2
 	echo "Starting" "$NAME"

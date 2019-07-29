@@ -43,36 +43,36 @@ validate_network() {
 
 wait_nm() {
 	RETRYCOUNTER=0
-	nm-online -t 3
+	nm-online -t 5
 	local ret=$?
 	while [ $ret -ne 0 ] && [  $RETRYCOUNTER -lt 5 ];
 	do
 		# if network manager is not online, make sure to execute it
-		echo "Network manager not ready $RETRYCOUNTER , ($ret)"
+		echo "Network manager not ready $RETRYCOUNTER , ($ret)"  >> /tmp/nm_log
 		$NM_DAEMON restart
-		nm-online -t 3
+		nm-online -t 5
 		ret=$?
 		let "RETRYCOUNTER++"
 	done
 
 	if [  $RETRYCOUNTER -eq 5 ];
 	then
-		echo "ERROR: Network manager can't run"
+		echo "ERROR: Network manager can't run" >> /tmp/nm_log
 		exit
 	else
-		echo "Network manager running"
+		echo "Network manager running"  >> /tmp/nm_log
 	fi
 }
 
 configure_nm() {
-	echo "Configure networkmanager connections"
+	echo "Configure networkmanager connections"  >> /tmp/nm_log
 	# if configuration file does not exist then use default defined above
 	if [ -f $CFG_FILE ];
 	then
-		echo "Load configuration file"
+		echo "Load configuration file"  >> /tmp/nm_log
 		source $CFG_FILE
 	else
-		echo "Configuration file not exist"
+		echo "Configuration file not exist"  >> /tmp/nm_log
 	fi
 
 	check_wired_interface
@@ -82,7 +82,7 @@ configure_nm() {
 
 check_wired_interface() {
 	local wired_set="$(nmcli c | grep wired)"
-	echo eth=$wired_set
+	echo eth=$wired_set  >> /tmp/nm_log
 	if [ -z "$wired_set" ];
 	then
 		nmcli c add type eth ifname eth0 con-name wired autoconnect yes
@@ -91,11 +91,26 @@ check_wired_interface() {
 }
 
 configure_nm_cellular() {
-	echo configuring cellular connection
-	#make sure to delete the cellular connetion before configuring a new one
+	echo configuring cellular connection  >> /tmp/nm_log
+	# make sure to delete the cellular connetion before configuring a new one
 	nmcli c delete $NM_SYSCON_NAME_CELL || true
 	nmcli c add type gsm ifname $NM_SYSCON_DEV_CELL con-name $NM_SYSCON_NAME_CELL autoconnect yes apn $CELL_ADDRESS
 	nmcli c mod $NM_SYSCON_NAME_CELL connection.autoconnect-priority  1
+
+	# cellular APN settings, make sure how to use user/pass if needed or not
+	if [ ! -z $CELL_USER ];
+	then
+		nmcli c mod $NM_SYSCON_NAME_CELL gsm.username $CELL_USER
+		if [ ! -z $CELL_PASS ];
+		then
+			echo cellular need user and a passowrd  >> /tmp/nm_log
+			nmcli c mod $NM_SYSCON_NAME_CELL gsm.password $CELL_PASS
+		else
+			echo cellular need both user without passowrd  >> /tmp/nm_log
+		fi
+	else
+		echo cellular does not need user and password >> /tmp/nm_log
+	fi
 }
 
 configure_nm_wifiap() {
@@ -107,9 +122,9 @@ configure_nm_wifiap() {
 	nmcli con up Hostspot
 }
 
-echo ==== NM monitor ===
+echo ==== NM monitor ===  > /tmp/nm_log
 WIFI_MAC_ADDR="$(ifconfig mlan0 | grep -o -E '([[:xdigit:]]{1,2}:){5}[[:xdigit:]]{1,2}' | tr ":" "-")"
-echo MAC is $WIFI_MAC_ADDR
+echo MAC is $WIFI_MAC_ADDR  >> /tmp/nm_log
 
 wait_nm
 configure_nm
@@ -123,7 +138,7 @@ while [ 1 ]; do
 		RETRYCOUNTER=0
 		while [ $PINGISOK -ne 1 ] && [  $RETRYCOUNTER -lt 3 ]; do
 			sleep 3
-			echo Recheck network connection: $RETRYCOUNTER
+			echo Recheck network connection: $RETRYCOUNTER   >> /tmp/nm_log
 			validate_network
 			let "RETRYCOUNTER++"
 		done
@@ -131,7 +146,7 @@ while [ 1 ]; do
 	fi
 
 	if [ $PINGISOK -ne 1 ]; then
-		echo Restart NM
+		echo Restart NM  >> /tmp/nm_log
 		$NM_DAEMON restart
 	fi
 done
