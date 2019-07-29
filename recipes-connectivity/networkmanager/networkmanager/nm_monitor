@@ -5,7 +5,31 @@
 #                    connections.
 ### END INIT INFO
 
+
+CFG_FILE=/netatim/network-settings/ipsettingsparams.cfg
+
+NM_DAEMON=/etc/init.d/NetworkManager
+
+NM_SYSCON_DEV_CELL=ttyUSB3
+NM_SYSCON_NAME_CELL=cellular_modem
+NM_SYSCON_DEV_WIFIAP=mlan0
+NM_SYSCON_NAME_WIFIAP=Hostspot
+NM_SYSCON_DEV_ETH=eth0
+NM_SYSCON_NAME_ETH=Wired
+
 PINGISOK=0
+WIFI_MAC_ADDR=''
+RETRYCOUNTER=0
+
+#default configuration in case CFG_FILE not exist
+CELL_ADDRESS='internetg'
+CELL_USER=''
+CELL_PASS=''
+APN_SSIDNAME=Netbeat_00-30-d6-1a-74-8a
+ACCESSPASS='password'
+CHANNEL='6'
+MLANSTATIC='19.168.1.1'
+DHCP_RANGE='19.168.1.50,19.168.1.150,12h'
 
 validate_network() {
 	local pingresult="$(timeout 3 ping google.com -c 3 | grep "time=")"
@@ -17,9 +41,79 @@ validate_network() {
 	fi
 }
 
-echo ==== NM monitor ===
+wait_nm() {
+	RETRYCOUNTER=0
+	nm-online -t 3
+	local ret=$?
+	while [ $ret -ne 0 ] && [  $RETRYCOUNTER -lt 5 ];
+	do
+		# if network manager is not online, make sure to execute it
+		echo "Network manager not ready $RETRYCOUNTER , ($ret)"
+		$NM_DAEMON restart
+		nm-online -t 3
+		ret=$?
+		let "RETRYCOUNTER++"
+	done
 
-RETRYCOUNTER=0
+	if [  $RETRYCOUNTER -eq 5 ];
+	then
+		echo "ERROR: Network manager can't run"
+		exit
+	else
+		echo "Network manager running"
+	fi
+}
+
+configure_nm() {
+	echo "Configure networkmanager connections"
+	# if configuration file does not exist then use default defined above
+	if [ -f $CFG_FILE ];
+	then
+		echo "Load configuration file"
+		source $CFG_FILE
+	else
+		echo "Configuration file not exist"
+	fi
+
+	check_wired_interface
+	configure_nm_cellular
+	configure_nm_wifiap
+}
+
+check_wired_interface() {
+	local wired_set="$(nmcli c | grep wired)"
+	echo eth=$wired_set
+	if [ -z "$wired_set" ];
+	then
+		nmcli c add type eth ifname eth0 con-name wired autoconnect yes
+		nmcli c mod wired connection.autoconnect-priority  3
+	fi
+}
+
+configure_nm_cellular() {
+	echo configuring cellular connection
+	#make sure to delete the cellular connetion before configuring a new one
+	nmcli c delete $NM_SYSCON_NAME_CELL || true
+	nmcli c add type gsm ifname $NM_SYSCON_DEV_CELL con-name $NM_SYSCON_NAME_CELL autoconnect yes apn $CELL_ADDRESS
+	nmcli c mod $NM_SYSCON_NAME_CELL connection.autoconnect-priority  1
+}
+
+configure_nm_wifiap() {
+	nmcli c delete Hostspot || true
+	nmcli con add type wifi ifname mlan0 con-name Hostspot autoconnect no ssid Netbeat_$WIFI_MAC_ADDR
+	nmcli con modify Hostspot 802-11-wireless.mode ap 802-11-wireless.band bg ipv4.method shared
+	nmcli con modify Hostspot wifi-sec.key-mgmt wpa-psk
+	nmcli con modify Hostspot wifi-sec.psk "password"
+	nmcli con up Hostspot
+}
+
+echo ==== NM monitor ===
+WIFI_MAC_ADDR="$(ifconfig mlan0 | grep -o -E '([[:xdigit:]]{1,2}:){5}[[:xdigit:]]{1,2}' | tr ":" "-")"
+echo MAC is $WIFI_MAC_ADDR
+
+wait_nm
+configure_nm
+
 while [ 1 ]; do
 	sleep 4
 	validate_network
@@ -38,7 +132,7 @@ while [ 1 ]; do
 
 	if [ $PINGISOK -ne 1 ]; then
 		echo Restart NM
-		/etc/init.d/NetworkManager restart
+		$NM_DAEMON restart
 	fi
 done
 

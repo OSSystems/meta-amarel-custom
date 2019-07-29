@@ -37,9 +37,6 @@ test -x $DAEMON || exit 0
 
 test -f /etc/default/NetworkManager && . /etc/default/NetworkManager
 
-WIFI_MAC_ADDR="$(ifconfig mlan0 | grep -o -E '([[:xdigit:]]{1,2}:){5}[[:xdigit:]]{1,2}' | tr ":" "-")"
-echo MAC is $WIFI_MAC_ADDR
-
 #
 #	Function that starts the daemon/service.
 #
@@ -52,28 +49,6 @@ d_start() {
 	start-stop-daemon --start --quiet --pidfile $PIDFILE \
 		--oknodo --user $USER --exec $DAEMON -- $DAEMON_OPTS --pid-file $PIDFILE
 
-	local eth_set="$(nmcli c | grep wired)"
-	echo eth=$eth_set
-	if [ -z "$eth_set" ];
-	then
-		nmcli c add type eth ifname eth0 con-name wired autoconnect yes
-		nmcli c mod wired connection.autoconnect-priority  3
-	fi
-
-	local modem_set="$(nmcli c | grep modem)"
-	echo modem=$modem_set
-	if [ -z "$modem_set" ];
-	then
-		nmcli c add type gsm ifname ttyUSB3 con-name cellular_modem autoconnect yes apn internetg
-		nmcli c mod cellular_modem connection.autoconnect-priority  1
-	fi
-
-	nmcli c delete Hostspot || true
-	nmcli con add type wifi ifname mlan0 con-name Hostspot autoconnect no ssid Netbeat_$WIFI_MAC_ADDR
-	nmcli con modify Hostspot 802-11-wireless.mode ap 802-11-wireless.band bg ipv4.method shared
-	nmcli con modify Hostspot wifi-sec.key-mgmt wpa-psk
-	nmcli con modify Hostspot wifi-sec.psk "password"
-	nmcli con up Hostspot
 }
 
 #
@@ -83,7 +58,7 @@ d_stop() {
 	start-stop-daemon --stop --retry 5 --quiet --pidfile $PIDFILE \
 		 --oknodo --user $USER --exec $DAEMON
 
-	killall ModemManager
+	killall ModemManager || true
 }
 
 
