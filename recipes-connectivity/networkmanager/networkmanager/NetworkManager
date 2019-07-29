@@ -83,6 +83,7 @@ d_stop() {
 	start-stop-daemon --stop --retry 5 --quiet --pidfile $PIDFILE \
 		 --oknodo --user $USER --exec $DAEMON
 
+	killall ModemManager
 }
 
 

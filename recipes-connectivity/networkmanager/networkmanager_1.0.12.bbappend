@@ -28,14 +28,15 @@ do_install_append() {
      install -m 644   ${WORKDIR}/NetworkManager.conf       ${D}${sysconfdir}/NetworkManager/
      install -m 644   ${WORKDIR}/interfaces                ${D}${sysconfdir}/network/
 
-     install -d ${D}${sysconfdir}/init.d
-     install -m 0755 ${WORKDIR}/NetworkManager      ${D}${sysconfdir}/init.d/
+     install -d ${D}${sbindir}
+     install -m 0755 ${WORKDIR}/nm_monitor      ${D}${sbindir}
 
-     install -m 0755 ${WORKDIR}/nm_monitor      ${D}${sysconfdir}/init.d/
+     install -d ${D}${sysconfdir}/init.d
+     install -m 0755 ${WORKDIR}/NetworkManager ${D}${sysconfdir}/init.d/
      install -m 0755 ${WORKDIR}/nm_runner      ${D}${sysconfdir}/init.d/
      update-rc.d -r ${D} nm_runner start 99 2 3 4 5 .
      update-rc.d -r ${D} nm_runner stop  99 0 1 6 .
 
-     update-rc.d -f hostapd remove
-     update-rc.d -f dnsmasq remove
+     update-rc.d -r ${D} -f hostapd remove .
+     update-rc.d -r ${D} -f dnsmasq remove .
 }

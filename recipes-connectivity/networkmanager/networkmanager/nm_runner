@@ -1,22 +1,86 @@
 #! /bin/sh
+### BEGIN INIT INFO
+# Provides:          nm_monitor
+# Required-Start:    $remote_fs dbus hal
+# Required-Stop:     $remote_fs dbus hal
+# Should-Start:.     $syslog
+# Should-Stop:       $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: network connection monitor
+# Description:       Daemon for network manager monitorring
+### END INIT INFO
 
-update-rc.d -f hostapd remove
-update-rc.d -f dnsmasq remove
+#update-rc.d -f hostapd remove
+#update-rc.d -f dnsmasq remove
+
+
+set -e
+
+prefix=/usr
+exec_prefix=/usr
+sbindir=/usr/sbin
+localstatedir=/var
+
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+DESC="network manager monitor"
+NAME="nm_monitor"
+
+DAEMON=${sbindir}/$NAME
+
+PIDDIR=${localstatedir}/run/nm_monitor
+PIDFILE=$PIDDIR/$NAME.pid
+
+USER=root
+
+echo ==== NM runner ===
+
+# Gracefully exit if the package has been removed.
+test -x $DAEMON || exit 0
+
+nm_start() {
+	echo ==== NM Start ===
+	/etc/init.d/NetworkManager start
+
+	if [ ! -d $PIDDIR ]; then
+		mkdir -p $PIDDIR
+		chown $USER:$USER $PIDDIR
+	fi
+
+	start-stop-daemon --start --quiet --pidfile $PIDFILE --oknodo --background  \
+		--user $USER --make-pidfile --exec $DAEMON
+}
+
+nm_stop() {
+	start-stop-daemon --stop --retry 5 --quiet --pidfile $PIDFILE --oknodo  \
+		--user $USER --exec $DAEMON
+	rm -f $PIDFILE
+	killall nm_monitor  || true
+
+	echo ==== NM Stop ===
+	/etc/init.d/NetworkManager stop
+}
 
 case "$1" in
   start)
-	echo "Starting nm_monitor"
-	/etc/init.d/nm_monitor &
+	echo "Starting" "$NAME"
+	nm_start
 	;;
   stop)
-	echo "Stopping nm_monitor"
-	killall nm_monitor
+	echo "Stopping"  "$NAME"
+	nm_stop
+	;;
+  restart)
+	echo "Restarting" "$NAME"
+	nm_stop
+	sleep 1
+	nm_start
 	;;
   status)
 	ps | grep  nm_monitor
 	;;
   *)
-	echo "Usage: $0 {start|stop|status}" >&2
+	echo "Usage: $0 {start|stop|restart|status}" >&2
 	exit 1
 	;;
 esac

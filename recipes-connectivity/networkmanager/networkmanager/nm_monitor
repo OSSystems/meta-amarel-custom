@@ -18,9 +18,6 @@ validate_network() {
 }
 
 echo ==== NM monitor ===
-sleep 20
-echo ==== NM Start ===
-/etc/init.d/NetworkManager start
 
 RETRYCOUNTER=0
 while [ 1 ]; do
