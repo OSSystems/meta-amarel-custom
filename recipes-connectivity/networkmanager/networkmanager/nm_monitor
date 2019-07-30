@@ -114,16 +114,17 @@ configure_nm_cellular() {
 }
 
 configure_nm_wifiap() {
-	nmcli c delete Hostspot || true
-	nmcli con add type wifi ifname mlan0 con-name Hostspot autoconnect no ssid Netbeat_$WIFI_MAC_ADDR
-	nmcli con modify Hostspot 802-11-wireless.mode ap 802-11-wireless.band bg ipv4.method shared
-	nmcli con modify Hostspot wifi-sec.key-mgmt wpa-psk
-	nmcli con modify Hostspot wifi-sec.psk "password"
+	nmcli c delete $NM_SYSCON_NAME_WIFIAP || true
+	nmcli con add type wifi ifname mlan0 con-name $NM_SYSCON_NAME_WIFIAP autoconnect no ssid Netbeat_$WIFI_MAC_ADDR
+	nmcli con modify $NM_SYSCON_NAME_WIFIAP 802-11-wireless.mode ap 802-11-wireless.band bg ipv4.method shared
+	nmcli con modify $NM_SYSCON_NAME_WIFIAP wifi-sec.key-mgmt wpa-psk
+	nmcli con modify $NM_SYSCON_NAME_WIFIAP wifi-sec.psk $ACCESSPASS
+	nmcli connection modify $NM_SYSCON_NAME_WIFIAP ipv4.addresses 19.168.2.5/24
 	nmcli con up Hostspot
 }
 
 echo ==== NM monitor ===  > /tmp/nm_log
-WIFI_MAC_ADDR="$(ifconfig mlan0 | grep -o -E '([[:xdigit:]]{1,2}:){5}[[:xdigit:]]{1,2}' | tr ":" "-")"
+WIFI_MAC_ADDR="$(ifconfig eth0 | grep -o -E '([[:xdigit:]]{1,2}:){5}[[:xdigit:]]{1,2}' | tr ":" "-")"
 echo MAC is $WIFI_MAC_ADDR  >> /tmp/nm_log
 
 wait_nm
