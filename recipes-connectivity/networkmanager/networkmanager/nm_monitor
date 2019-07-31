@@ -5,11 +5,16 @@
 #                    connections.
 ### END INIT INFO
 
+# local fixes
+
+update-rc.d -f hostapd remove
+update-rc.d -f dnsmasq remove
+ln -sf /usr/lib/jvm/java-8-oracle/jre/bin/java /usr/bin/java
+
 
 CFG_FILE=/netatim/network-settings/ipsettingsparams.cfg
 
 NM_DAEMON=/etc/init.d/NetworkManager
-
 NM_SYSCON_DEV_CELL=ttyUSB3
 NM_SYSCON_NAME_CELL=cellular_modem
 NM_SYSCON_DEV_WIFIAP=mlan0
@@ -25,11 +30,88 @@ RETRYCOUNTER=0
 CELL_ADDRESS='internetg'
 CELL_USER=''
 CELL_PASS=''
-APN_SSIDNAME=Netbeat_00-30-d6-1a-74-8a
+APN_SSIDNAME=Netbeat
 ACCESSPASS='password'
 CHANNEL='6'
-MLANSTATIC='19.168.1.1'
-DHCP_RANGE='19.168.1.50,19.168.1.150,12h'
+MLANSTATIC=19.168.1.1
+DHCP_RANGE=19.168.1.50,19.168.1.150,12h
+NM_MONITOR_PING_PERIOD=60
+
+wait_hw() {
+	while [ ! -c /dev/$NM_SYSCON_DEV_CELL ];
+	do
+		echo "$NM_SYSCON_DEV_CELL not exist yet"
+		sleep 1;
+	done
+	echo "$NM_SYSCON_DEV_CELL is exist"
+
+	while [ -z "$(ifconfig $NM_SYSCON_DEV_WIFIAP)" ]; do
+		echo "$NM_SYSCON_DEV_WIFIAP not exist yet"
+		sleep 1;
+	done
+	echo "$NM_SYSCON_DEV_WIFIAP is exist"
+}
+
+delete_usb2() {
+	if [ -c "/dev/ttyUSB2" ]; then
+		echo "Delete ttyUSB2"
+		rm /dev/ttyUSB2
+	fi
+}
+
+nm_reset_configuration() {
+	$NM_DAEMON stop
+	rm -f /etc/NetworkManager/system-connections/*
+	sleep 1
+	$NM_DAEMON start
+	sleep 1
+}
+
+nm_set_default_config() {
+	echo configure wired dev $NM_SYSCON_DEV_ETH with new connection $NM_SYSCON_NAME_ETH
+	nmcli c add type eth ifname $NM_SYSCON_DEV_ETH con-name $NM_SYSCON_NAME_ETH autoconnect yes
+	nmcli c mod $NM_SYSCON_NAME_ETH connection.autoconnect-priority  3
+	nmcli c up $NM_SYSCON_NAME_ETH
+
+	echo configure hotsport dev $NM_SYSCON_DEV_CELL with new connection $NM_SYSCON_NAME_CELL
+	nmcli c add type gsm ifname $NM_SYSCON_DEV_CELL con-name $NM_SYSCON_NAME_CELL autoconnect yes apn $CELL_ADDRESS
+	nmcli c mod $NM_SYSCON_NAME_CELL connection.autoconnect-priority  1
+	# cellular APN settings, make sure how to use user/pass if needed or not
+	if [ ! -z $CELL_USER ];
+	then
+		nmcli c mod $NM_SYSCON_NAME_CELL gsm.username $CELL_USER
+		if [ ! -z $CELL_PASS ];
+		then
+			echo cellular need user and a passowrd
+			nmcli c mod $NM_SYSCON_NAME_CELL gsm.password $CELL_PASS
+		else
+			echo cellular need user without passowrd
+		fi
+	else
+		echo cellular does not need user and password
+	fi
+	nmcli c up $NM_SYSCON_NAME_CELL
+
+	echo configure hotspot dev $NM_SYSCON_DEV_WIFIAP with new connection $NM_SYSCON_NAME_WIFIAP
+	WIFI_MAC_ADDR="$(ifconfig eth0 | grep -o -E '([[:xdigit:]]{1,2}:){5}[[:xdigit:]]{1,2}' | tr ":" "-")"
+	echo MAC is $WIFI_MAC_ADDR
+	nmcli con add type wifi ifname $NM_SYSCON_DEV_WIFIAP con-name $NM_SYSCON_NAME_WIFIAP autoconnect no ssid $APN_SSIDNAME_$WIFI_MAC_ADDR
+	nmcli con modify $NM_SYSCON_NAME_WIFIAP 802-11-wireless.mode ap 802-11-wireless.band bg ipv4.method shared
+	nmcli con modify $NM_SYSCON_NAME_WIFIAP wifi-sec.key-mgmt wpa-psk
+	nmcli con modify $NM_SYSCON_NAME_WIFIAP wifi-sec.psk $ACCESSPASS
+	nmcli connection modify $NM_SYSCON_NAME_WIFIAP ipv4.addresses 19.168.1.1/24
+	nmcli con up $NM_SYSCON_NAME_WIFIAP
+}
+
+nm_online() {
+	nm-online -t 5
+	local ret=$?
+	if [ $ret -ne 0 ];
+	then
+		echo No connectivity, all interfaces are down
+	fi
+	echo NetworkManager online, at least one interfaces is up
+}
 
 validate_network() {
 	local pingresult="$(timeout 3 ping google.com -c 3 | grep "time=")"
@@ -45,53 +127,33 @@ wait_nm() {
 	RETRYCOUNTER=0
 	nm-online -t 5
 	local ret=$?
-	while [ $ret -ne 0 ] && [  $RETRYCOUNTER -lt 5 ];
-	do
-		# if network manager is not online, make sure to execute it
-		echo "Network manager not ready $RETRYCOUNTER , ($ret)"  >> /tmp/nm_log
+	if [ $ret -ne 0 ];
+	then
+		echo restarting NetworkManager
 		$NM_DAEMON restart
-		nm-online -t 5
+		nm-online -t 3
 		ret=$?
-		let "RETRYCOUNTER++"
-	done
-
-	if [  $RETRYCOUNTER -eq 5 ];
-	then
-		echo "ERROR: Network manager can't run" >> /tmp/nm_log
-		exit
-	else
-		echo "Network manager running"  >> /tmp/nm_log
 	fi
-}
-
-configure_nm() {
-	echo "Configure networkmanager connections"  >> /tmp/nm_log
-	# if configuration file does not exist then use default defined above
-	if [ -f $CFG_FILE ];
+	if [ $ret -ne 0 ];
 	then
-		echo "Load configuration file"  >> /tmp/nm_log
-		source $CFG_FILE
-	else
-		echo "Configuration file not exist"  >> /tmp/nm_log
+		nm_reset_configuration
+		nm_set_default_config
 	fi
-
-	check_wired_interface
-	configure_nm_cellular
-	configure_nm_wifiap
 }
 
 check_wired_interface() {
 	local wired_set="$(nmcli c | grep wired)"
-	echo eth=$wired_set  >> /tmp/nm_log
+	echo eth=$wired_set
 	if [ -z "$wired_set" ];
 	then
-		nmcli c add type eth ifname eth0 con-name wired autoconnect yes
-		nmcli c mod wired connection.autoconnect-priority  3
+		nmcli c add type eth ifname $NM_SYSCON_DEV_ETH con-name $NM_SYSCON_NAME_ETH autoconnect yes
+		nmcli c mod $NM_SYSCON_NAME_ETH connection.autoconnect-priority  3
+		nmcli c up 
 	fi
 }
 
 configure_nm_cellular() {
-	echo configuring cellular connection  >> /tmp/nm_log
+	echo configuring cellular connection
 	# make sure to delete the cellular connetion before configuring a new one
 	nmcli c delete $NM_SYSCON_NAME_CELL || true
 	nmcli c add type gsm ifname $NM_SYSCON_DEV_CELL con-name $NM_SYSCON_NAME_CELL autoconnect yes apn $CELL_ADDRESS
@@ -103,14 +165,15 @@ configure_nm_cellular() {
 		nmcli c mod $NM_SYSCON_NAME_CELL gsm.username $CELL_USER
 		if [ ! -z $CELL_PASS ];
 		then
-			echo cellular need user and a passowrd  >> /tmp/nm_log
+			echo cellular need user and a passowrd
 			nmcli c mod $NM_SYSCON_NAME_CELL gsm.password $CELL_PASS
 		else
-			echo cellular need both user without passowrd  >> /tmp/nm_log
+			echo cellular need user without passowrd
 		fi
 	else
-		echo cellular does not need user and password >> /tmp/nm_log
+		echo cellular does not need user and password
 	fi
+	nmcli con up $NM_SYSCON_NAME_WIFIAP
 }
 
 configure_nm_wifiap() {
@@ -119,27 +182,47 @@ configure_nm_wifiap() {
 	nmcli con modify $NM_SYSCON_NAME_WIFIAP 802-11-wireless.mode ap 802-11-wireless.band bg ipv4.method shared
 	nmcli con modify $NM_SYSCON_NAME_WIFIAP wifi-sec.key-mgmt wpa-psk
 	nmcli con modify $NM_SYSCON_NAME_WIFIAP wifi-sec.psk $ACCESSPASS
-	nmcli connection modify $NM_SYSCON_NAME_WIFIAP ipv4.addresses 19.168.2.5/24
-	nmcli con up Hostspot
+	nmcli connection modify $NM_SYSCON_NAME_WIFIAP ipv4.addresses $MLANSTATIC/24
+	nmcli con up $NM_SYSCON_NAME_WIFIAP
 }
 
-echo ==== NM monitor ===  > /tmp/nm_log
-WIFI_MAC_ADDR="$(ifconfig eth0 | grep -o -E '([[:xdigit:]]{1,2}:){5}[[:xdigit:]]{1,2}' | tr ":" "-")"
-echo MAC is $WIFI_MAC_ADDR  >> /tmp/nm_log
+configure_nm() {
+	echo "Configure networkmanager connections"
+	check_wired_interface
+	configure_nm_cellular
+	configure_nm_wifiap
+}
 
-wait_nm
-configure_nm
+echo NetworkManager Monitor start
+
+# if configuration file does not exist then use default defined above
+if [ -f $CFG_FILE ];
+then
+	echo "Load configuration file"
+	source $CFG_FILE
+else
+	echo "Configuration file not exist"
+fi
+
+wait_hw
+delete_usb2
+nm_reset_configuration
+nm_set_default_config
 
 while [ 1 ]; do
-	sleep 4
+	sleep $NM_MONITOR_PING_PERIOD
+	echo checking connectivity
+	nm_online
 	validate_network
 	if [ $PINGISOK -eq 1 ]; then
+		echo okay
 		continue
 	else
+		echo no connectivity
 		RETRYCOUNTER=0
 		while [ $PINGISOK -ne 1 ] && [  $RETRYCOUNTER -lt 3 ]; do
 			sleep 3
-			echo Recheck network connection: $RETRYCOUNTER   >> /tmp/nm_log
+			echo Recheck network connection: $RETRYCOUNTER
 			validate_network
 			let "RETRYCOUNTER++"
 		done
@@ -147,8 +230,9 @@ while [ 1 ]; do
 	fi
 
 	if [ $PINGISOK -ne 1 ]; then
-		echo Restart NM  >> /tmp/nm_log
-		$NM_DAEMON restart
+		echo Restart NetworkManager
+		nm_reset_configuration
+		nm_set_default_config
 	fi
 done
 
