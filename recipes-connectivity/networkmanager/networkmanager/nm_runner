@@ -8,38 +8,8 @@
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
 # Short-Description: network connection monitor
-# Description:       Daemon for network manager monitorring
+# Description:       Daemon for connectivity monitorring
 ### END INIT INFO
-
-NM_SYSCON_DEV_CELL=/dev/ttyUSB3
-NM_SYSCON_DEV_WIFIAP=mlan0
-
-update-rc.d -f hostapd remove
-update-rc.d -f dnsmasq remove
-ln -sf /usr/lib/jvm/java-8-oracle/jre/bin/java /usr/bin/java
-
-delete_usb2() {
-	if [ -c "/dev/ttyUSB2" ]; then
-		echo "Delete ttyUSB2"
-		rm /dev/ttyUSB2
-	fi
-}
-
-wait_hw() {
-	while [ ! -c $NM_SYSCON_DEV_CELL ];
-	do
-		echo "$NM_SYSCON_DEV_CELL not exist yet"
-		sleep 1;
-	done
-	echo "$NM_SYSCON_DEV_CELL is exist"
-
-	while [ -z "$(ifconfig $NM_SYSCON_DEV_WIFIAP)" ]; do
-		echo "$NM_SYSCON_DEV_WIFIAP not exist yet"
-		sleep 1;
-	done
-	echo "$NM_SYSCON_DEV_WIFIAP is exist"
-}
-
 
 set -e
 
@@ -49,7 +19,7 @@ sbindir=/usr/sbin
 localstatedir=/var
 
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-DESC="network manager monitor"
+DESC="NetworkManager monitor service"
 NAME="nm_monitor"
 
 DAEMON=${sbindir}/$NAME
@@ -59,15 +29,10 @@ PIDFILE=$PIDDIR/$NAME.pid
 
 USER=root
 
-echo ==== NM runner ===
-
 # Gracefully exit if the package has been removed.
 test -x $DAEMON || exit 0
 
 nm_start() {
-	echo ==== NM Start ===
-	/etc/init.d/NetworkManager start
-
 	if [ ! -d $PIDDIR ]; then
 		mkdir -p $PIDDIR
 		chown $USER:$USER $PIDDIR
@@ -75,7 +40,7 @@ nm_start() {
 
 	start-stop-daemon --start --quiet --pidfile $PIDFILE --oknodo --background  \
 		--user $USER --make-pidfile --exec $DAEMON
-	echo "=== Monitor daemon started ==="
+	echo "connectivity monitor daemon started"
 }
 
 nm_stop() {
@@ -84,15 +49,12 @@ nm_stop() {
 	rm -f $PIDFILE
 	killall nm_monitor  || true
 
-	echo ==== NM Stop ===
 	/etc/init.d/NetworkManager stop
+	echo "connectivity monitor daemon stopped"
 }
 
 case "$1" in
   start)
-	sleep 10
-	wait_hw
-	delete_usb2
 	echo "Starting" "$NAME"
 	nm_start
 	;;
@@ -103,7 +65,6 @@ case "$1" in
   restart)
 	echo "Restarting" "$NAME"
 	nm_stop
-	sleep 1
 	nm_start
 	;;
   status)
