@@ -13,6 +13,7 @@ DEPENDS += " ppp wireless-tools"
 
 PACKAGECONFIG += " ppp"
 PACKAGECONFIG += " wifi"
+PACKAGECONFIG_remove = "consolekit"
 
 EXTRA_OECONF_append = " \
     --with-nmcli=yes \
