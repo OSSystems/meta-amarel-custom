@@ -95,7 +95,7 @@ nm_set_default_config() {
 	echo configure hotspot dev $NM_SYSCON_DEV_WIFIAP with new connection $NM_SYSCON_NAME_WIFIAP
 	WIFI_MAC_ADDR="$(ifconfig eth0 | grep -o -E '([[:xdigit:]]{1,2}:){5}[[:xdigit:]]{1,2}' | tr ":" "-")"
 	echo MAC is $WIFI_MAC_ADDR
-	nmcli con add type wifi ifname $NM_SYSCON_DEV_WIFIAP con-name $NM_SYSCON_NAME_WIFIAP autoconnect no ssid $APN_SSIDNAME_$WIFI_MAC_ADDR
+	nmcli con add type wifi ifname $NM_SYSCON_DEV_WIFIAP con-name $NM_SYSCON_NAME_WIFIAP autoconnect no ssid ${APN_SSIDNAME}_${WIFI_MAC_ADDR}
 	nmcli con modify $NM_SYSCON_NAME_WIFIAP 802-11-wireless.mode ap 802-11-wireless.band bg ipv4.method shared
 	nmcli con modify $NM_SYSCON_NAME_WIFIAP wifi-sec.key-mgmt wpa-psk
 	nmcli con modify $NM_SYSCON_NAME_WIFIAP wifi-sec.psk $ACCESSPASS
@@ -205,6 +205,7 @@ else
 fi
 
 wait_hw
+sleep 10
 delete_usb2
 nm_reset_configuration
 nm_set_default_config
@@ -230,9 +231,19 @@ while [ 1 ]; do
 	fi
 
 	if [ $PINGISOK -ne 1 ]; then
+		echo Stop NetworkManager
+		/etc/init.d/NetworkManager stop
+		killall ModemManager
+		sleep 1
+		echo reset the modem using AT+QRST
+		stty -F /dev/ttyUSB3 115200 raw
+		echo -e "at+qrst=1,0\r\n" > /dev/ttyUSB3
+		sleep 20
+		wait_hw
+		delete_usb2
+		sleep 1
 		echo Restart NetworkManager
-		nm_reset_configuration
-		nm_set_default_config
+		/etc/init.d/NetworkManager start
 	fi
 done
 
